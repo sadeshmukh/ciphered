@@ -1,27 +1,42 @@
 import { useState, useEffect, useRef } from "react";
 import { samplePuzzles } from "../data/samplePuzzles";
+import { useLocalStorage } from "../data/utils";
 
 interface Props {
   cipherText: string;
 }
 
 export default function AristocratSolver() {
-  const letters = Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+  const letters: (string | null)[] = Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
   const EMPTY_SLOT = null;
   const containerRef = useRef<HTMLDivElement>(null);
   const [charsPerLine, setCharsPerLine] = useState(0);
 
   // State for SUBSTITUTION mappings (uppercase)
-  const [substitutions, setSubstitutions] = useState<Record<string, string>>(
-    {}
+  const [substitutions, setSubstitutions] = useLocalStorage(
+    "substitutions",
+    {} as Record<string, string>
   );
-  const [cipherText, setCipherText] = useState(samplePuzzles[0].cipherText);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isEditable, setIsEditable] = useState(false);
+  const [cipherText, setCipherText] = useLocalStorage(
+    "cipherText",
+    samplePuzzles[0].cipherText
+  );
+  const [isEditingCipherText, setIsEditingCipherText] = useState(false);
+  const [isEditableSubHeader, setIsEditableSubHeader] = useState(false);
   const [isCaesarMode, setIsCaesarMode] = useState(false);
   const [caesarShift, setCaesarShift] = useState(0);
-  const [letterOrder, setLetterOrder] = useState<(string | null)[]>(letters);
-  const [frequencies, setFrequencies] = useState<Record<string, number>>({});
+  const [showCaesarModal, setShowCaesarModal] = useState(false);
+  const [pendingCaesarShift, setPendingCaesarShift] = useState<number | null>(
+    null
+  );
+  const [letterOrder, setLetterOrder] = useLocalStorage<(string | null)[]>(
+    "letterOrder",
+    letters as (string | null)[]
+  );
+  const [frequencies, setFrequencies] = useLocalStorage(
+    "frequencies",
+    {} as Record<string, number>
+  );
   const [currentSampleIndex, setCurrentSampleIndex] = useState(0);
 
   useEffect(() => {
@@ -43,16 +58,22 @@ export default function AristocratSolver() {
 
   // pad with nulls
   useEffect(() => {
-    const uniqueLetters = Array.from(
-      new Set(cipherText.replace(/\s/g, "").toUpperCase())
-    );
-    // pad end
-    const uniqueLettersWithPadding = [
-      ...uniqueLetters,
-      ...Array(26 - uniqueLetters.length).fill(null),
-    ];
-
-    setLetterOrder(uniqueLettersWithPadding);
+    // set letterOrder if it is empty or all null (not loaded from localStorage)
+    const isUnset =
+      !letterOrder ||
+      letterOrder.length === 0 ||
+      letterOrder.every((l) => l === null);
+    if (isUnset) {
+      const uniqueLetters = Array.from(
+        new Set(cipherText.replace(/\s/g, "").toUpperCase())
+      );
+      // pad end
+      const uniqueLettersWithPadding = [
+        ...uniqueLetters,
+        ...Array(26 - uniqueLetters.length).fill(null),
+      ];
+      setLetterOrder(uniqueLettersWithPadding);
+    }
   }, [cipherText]);
 
   // init freqs
@@ -173,27 +194,50 @@ export default function AristocratSolver() {
     let shift = newShift;
     if (shift > 25) shift = 0;
     if (shift < 0) shift = 25;
-    setCaesarShift(shift);
+    if (!isCaesarMode) {
+      setPendingCaesarShift(shift);
+      setShowCaesarModal(true);
+      return;
+    }
+    actuallyApplyCaesarShift(shift);
+  };
 
+  const actuallyApplyCaesarShift = (shift: number) => {
+    setCaesarShift(shift);
     const newSubs: Record<string, string> = {};
     letters.forEach((letter) => {
-      const charCode = letter.charCodeAt(0);
-      const shiftedCode = ((charCode - 65 + shift) % 26) + 65;
-      newSubs[letter] = String.fromCharCode(shiftedCode);
+      if (letter) {
+        const charCode = letter.charCodeAt(0);
+        const shiftedCode = ((charCode - 65 + shift) % 26) + 65;
+        newSubs[letter] = String.fromCharCode(shiftedCode);
+      }
     });
     setSubstitutions(newSubs);
+  };
+
+  const handleConfirmCaesar = () => {
+    if (pendingCaesarShift !== null) {
+      actuallyApplyCaesarShift(pendingCaesarShift);
+      setPendingCaesarShift(null);
+      setShowCaesarModal(false);
+    }
+  };
+
+  const handleCancelCaesar = () => {
+    setPendingCaesarShift(null);
+    setShowCaesarModal(false);
   };
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6" ref={containerRef}>
       <div className="mb-4">
         <button
-          onClick={() => setIsEditing(!isEditing)}
+          onClick={() => setIsEditingCipherText(!isEditingCipherText)}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition mb-2"
         >
-          <span>{isEditing ? "▼" : "▶"} Edit Cipher Text</span>
+          <span>{isEditingCipherText ? "▼" : "▶"} Edit Cipher Text</span>
         </button>
-        {isEditing && (
+        {isEditingCipherText && (
           <textarea
             id="ciphertext"
             value={cipherText}
@@ -215,39 +259,51 @@ export default function AristocratSolver() {
             <div className="flex">
               <span className="w-20 flex-shrink-0 text-gray-600">cipher:</span>
               <div className="flex tracking-wider text-lg">
-                {Array.from(line).map((char, index) =>
-                  char === " " ? (
-                    <span key={index} className="w-[1ch]">
-                      &nbsp;
-                    </span>
-                  ) : (
+                {Array.from(line).map((char, index) => {
+                  if (!/[A-Z]/.test(char)) {
+                    return (
+                      <span
+                        key={index}
+                        className="w-[1ch] text-center mx-[1px] font-mono"
+                      >
+                        {char === " " ? "\u00A0" : char}
+                      </span>
+                    );
+                  }
+                  return (
                     <span
                       key={index}
                       className="w-[1ch] text-center mx-[1px] font-mono"
                     >
                       {char}
                     </span>
-                  )
-                )}
+                  );
+                })}
               </div>
             </div>
             <div className="flex">
               <span className="w-20 flex-shrink-0 text-gray-600">plain:</span>
               <div className="flex tracking-wider text-lg">
-                {Array.from(line).map((char, index) =>
-                  char === " " ? (
-                    <span key={index} className="w-[1ch]">
-                      &nbsp;
-                    </span>
-                  ) : (
+                {Array.from(line).map((char, index) => {
+                  if (!/[A-Z]/.test(char)) {
+                    return (
+                      <span
+                        key={index}
+                        className="w-[1ch] text-center mx-[1px] font-mono bg-gray-50"
+                      >
+                        {char === " " ? "\u00A0" : char}
+                      </span>
+                    );
+                  }
+                  return (
                     <span
                       key={index}
                       className="w-[1ch] text-center mx-[1px] font-mono bg-gray-50"
                     >
                       {substitutions[char] || "_"}
                     </span>
-                  )
-                )}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -278,23 +334,23 @@ export default function AristocratSolver() {
       <div className="flex justify-between items-center mb-2">
         <div className="text-sm text-gray-600">Substitution Table</div>
         <div className="flex gap-2">
-          {isEditable && (
+          {isEditableSubHeader && (
             <button
               className="text-sm px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 transition"
               onClick={resetLetterOrder}
             >
-              Reset Order
+              Reset to ABC
             </button>
           )}
           <button
             className={`text-sm px-3 py-1 rounded transition ${
-              isEditable
+              isEditableSubHeader
                 ? "bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
                 : "bg-gray-100 hover:bg-gray-200"
             }`}
-            onClick={() => setIsEditable(!isEditable)}
+            onClick={() => setIsEditableSubHeader(!isEditableSubHeader)}
           >
-            {isEditable ? "Lock" : "Unlock"}
+            {isEditableSubHeader ? "Lock" : "Unlock"}
           </button>
           <button
             className={`text-sm px-3 py-1 rounded transition ${
@@ -343,7 +399,7 @@ export default function AristocratSolver() {
       {/* debatably dynamic tabular interface */}
       <table
         className={`w-full text-center table-fixed ${
-          isEditable ? "border-indigo-200 border-2 rounded" : ""
+          isEditableSubHeader ? "border-indigo-200 border-2 rounded" : ""
         }`}
       >
         <thead>
@@ -352,12 +408,12 @@ export default function AristocratSolver() {
               <th
                 key={index}
                 className={`w-[3.85%] px-1 py-2 text-sm font-mono ${
-                  isEditable
+                  isEditableSubHeader
                     ? "bg-indigo-50 hover:bg-indigo-100 transition cursor-pointer"
                     : "bg-gray-100"
                 }`}
               >
-                {isEditable ? (
+                {isEditableSubHeader ? (
                   <input
                     type="text"
                     maxLength={1}
@@ -428,6 +484,33 @@ export default function AristocratSolver() {
           </tr>
         </tbody>
       </table>
+      {showCaesarModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+          <div className="bg-white p-6 rounded shadow-lg max-w-sm w-full">
+            <div className="mb-4 text-lg font-semibold">
+              Overwrite Substitutions?
+            </div>
+            <div className="mb-6 text-gray-700">
+              Applying the Caesar shift will overwrite your current
+              substitutions. Are you sure you want to continue?
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
+                onClick={handleCancelCaesar}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-600"
+                onClick={handleConfirmCaesar}
+              >
+                Overwrite
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
