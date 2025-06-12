@@ -1,0 +1,90 @@
+---
+// Navigation items
+const navItems = [
+  { name: "Ciphers", href: "/ciphers" },
+  { name: "Learn", href: "/learn" },
+  { name: "Tools", href: "/tools" },
+  { name: "About", href: "/about" },
+];
+---
+
+<header class="border-b bg-white">
+  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div class="flex h-16 items-center justify-between">
+      <!-- Logo/Home Link -->
+      <div class="flex-shrink-0">
+        <a href="/" class="flex items-center">
+          <span class="text-2xl font-bold text-gray-900">Ciphered</span>
+        </a>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="hidden md:flex md:space-x-8">
+        {
+          navItems.map((item) => (
+            <a
+              href={item.href}
+              class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 hover:text-gray-600 hover:border-b-2 hover:border-gray-600 transition-colors"
+            >
+              {item.name}
+            </a>
+          ))
+        }
+      </nav>
+
+      <!-- Mobile menu button -->
+      <div class="flex md:hidden">
+        <button
+          type="button"
+          class="inline-flex items-center justify-center rounded-md p-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+          aria-controls="mobile-menu"
+          aria-expanded="false"
+        >
+          <span class="sr-only">Open main menu</span>
+          <!-- Menu icon -->
+          <svg
+            class="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile menu -->
+  <div class="md:hidden" id="mobile-menu">
+    <div class="space-y-1 pb-3 pt-2">
+      {
+        navItems.map((item) => (
+          <a
+            href={item.href}
+            class="block border-l-4 border-transparent py-2 pl-3 pr-4 text-base font-medium text-gray-700 hover:border-gray-600 hover:bg-gray-50 hover:text-gray-900"
+          >
+            {item.name}
+          </a>
+        ))
+      }
+    </div>
+  </div>
+</header>
+
+<script>
+  // Toggle mobile menu
+  const button = document.querySelector('button[aria-controls="mobile-menu"]');
+  const menu = document.getElementById("mobile-menu");
+
+  button?.addEventListener("click", () => {
+    const expanded = button.getAttribute("aria-expanded") === "true";
+    button.setAttribute("aria-expanded", (!expanded).toString());
+    menu?.classList.toggle("hidden");
+  });
+</script>

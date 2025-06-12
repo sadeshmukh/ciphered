@@ -1,0 +1,32 @@
+---
+import Layout from "../layouts/Layout.astro";
+import AristocratSolver from "../components/AristocratSolver";
+
+// Sample encrypted text for demonstration
+const sampleText = "A DEGHASDFA";
+const letters = Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+
+// Mock frequency data - we'll calculate this dynamically later
+const frequencies: Record<string, number> = {
+  A: 3,
+  D: 2,
+  E: 1,
+  F: 1,
+  G: 1,
+  H: 1,
+  S: 1,
+};
+---
+
+<Layout title="Aristocrat | Ciphered">
+  <main class="container mx-auto px-4 py-8">
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900">Aristocrats</h1>
+      <!-- <p class="mt-2 text-gray-600">
+        Solve monoalphabetic substitution ciphers with interactive tools
+      </p> -->
+    </div>
+
+    <AristocratSolver client:load />
+  </main>
+</Layout>
