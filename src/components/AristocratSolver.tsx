@@ -379,7 +379,7 @@ export default function AristocratSolver(props: Props = {}) {
         ref={containerRef}
       >
         <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 relative z-[60]">
             <button
               onClick={() => setIsEditingCipherText(!isEditingCipherText)}
               className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white transition"
