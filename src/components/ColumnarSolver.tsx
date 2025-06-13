@@ -128,6 +128,9 @@ export default function ColumnarSolver({
     initialCipherText
   );
   const [isEditingCipherText, setIsEditingCipherText] = useState(false);
+  const [wordInput, setWordInput] = useState("");
+  const [hoveredCharIndex, setHoveredCharIndex] = useState<number | null>(null);
+  const [isBoxHovered, setIsBoxHovered] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -277,7 +280,35 @@ export default function ColumnarSolver({
     return null;
   };
 
-  const highlightFunctions: HighlightFn[] = [highlightBottomRowX];
+  const highlightChar = (
+    row: number,
+    col: number,
+    content: string,
+    data: string[][]
+  ) => {
+    if (hoveredCharIndex !== null && content === wordInput[hoveredCharIndex]) {
+      return "bg-blue-500 dark:bg-blue-500";
+    }
+    return null;
+  };
+
+  const highlightAnyChar = (
+    row: number,
+    col: number,
+    content: string,
+    data: string[][]
+  ) => {
+    if (isBoxHovered && Array.from(wordInput).includes(content)) {
+      return "bg-green-500 dark:bg-green-500";
+    }
+    return null;
+  };
+
+  const highlightFunctions: HighlightFn[] = [
+    highlightBottomRowX,
+    highlightChar,
+    highlightAnyChar,
+  ];
 
   // get the first non-null highlight
   const getCellHighlightClass = (
@@ -474,10 +505,57 @@ export default function ColumnarSolver({
               Transposed Text
             </div>
             <div className="font-mono text-lg p-4 bg-gray-50 dark:bg-gray-800 rounded-lg break-all">
-              {transposedText}
+              {transposedText.split("").map((char, index) => {
+                let highlightClass = "";
+                if (
+                  hoveredCharIndex !== null &&
+                  char === wordInput[hoveredCharIndex]
+                ) {
+                  highlightClass = "bg-blue-500 dark:bg-blue-500";
+                } else if (isBoxHovered && wordInput.includes(char)) {
+                  highlightClass = "bg-green-500 dark:bg-green-500";
+                }
+                return (
+                  <span key={index} className={highlightClass}>
+                    {char}
+                  </span>
+                );
+              })}
             </div>
           </div>
         )}
+      </div>
+      <div className="w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+        {/* essentially - searches for chars in transposed text and table + highlights chars on hover, with preference to individual char over any */}
+        <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+          Search Word
+        </div>
+        <div
+          className="flex flex-wrap gap-1 p-2 border dark:border-gray-600 rounded font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 min-h-[2.5rem]"
+          onMouseEnter={() => setIsBoxHovered(true)}
+          onMouseLeave={() => setIsBoxHovered(false)}
+        >
+          {wordInput.split("").map((char, index) => (
+            <span
+              key={index}
+              className={`px-1 cursor-pointer ${
+                hoveredCharIndex === index ? "bg-blue-200 dark:bg-blue-800" : ""
+              }`}
+              onMouseEnter={() => setHoveredCharIndex(index)}
+              onMouseLeave={() => setHoveredCharIndex(null)}
+            >
+              {char}
+            </span>
+          ))}
+          <input
+            type="text"
+            value={wordInput}
+            onChange={(e) => setWordInput(e.target.value.toUpperCase())}
+            className="flex-1 min-w-[2rem] bg-transparent outline-none text-transparent caret-transparent"
+            placeholder="Enter a word..."
+            aria-label="Word input"
+          />
+        </div>
       </div>
     </div>
   );
