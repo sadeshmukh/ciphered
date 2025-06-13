@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-function useLocalStorage<T>(key: string, initialValue: T) {
+export function useLocalStorage<T>(key: string, initialValue: T) {
   const [storedValue, setStoredValue] = useState<T>(initialValue);
 
   useEffect(() => {
@@ -34,4 +34,15 @@ function useLocalStorage<T>(key: string, initialValue: T) {
   return [storedValue, setValue] as const;
 }
 
-export { useLocalStorage };
+export function getWordPattern(word: string): string {
+  const seen = new Map<string, number>();
+  let nextNum = 1;
+  return Array.from(word)
+    .map((char) => {
+      if (!seen.has(char)) {
+        seen.set(char, nextNum++);
+      }
+      return seen.get(char);
+    })
+    .join("");
+}

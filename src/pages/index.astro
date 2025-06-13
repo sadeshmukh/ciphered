@@ -1,7 +1,132 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import { samplePuzzles } from "../data/samplePuzzles";
 ---
 
-<Layout title="Home">
-  <h1>Hello World</h1>
+<Layout title="Ciphered - Cryptogram Solving Tools">
+  <div class="max-w-6xl mx-auto">
+    <!-- Hero Section -->
+    <div class="text-center mb-16">
+      <h1
+        class="text-6xl font-mono font-bold mb-4 text-gray-900 dark:text-gray-100"
+      >
+        CIPHERED
+      </h1>
+      <p
+        class="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto font-mono"
+      >
+        A collection of tools to help you solve cryptograms by hand. No AI, no
+        shortcuts - just good old-fashioned puzzle solving.
+      </p>
+    </div>
+
+    <!-- Tools Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
+      <!-- Aristocrat Cipher -->
+      <a href="/aristocrat" class="group">
+        <div
+          class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300 hover:border-blue-500 dark:hover:border-blue-400"
+        >
+          <div class="p-6">
+            <h3
+              class="text-xl font-mono font-semibold mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"
+            >
+              Aristocrat Cipher
+            </h3>
+            <p class="text-gray-600 dark:text-gray-300 mb-4 font-mono">
+              Simple substitution cipher where each letter is replaced by
+              another letter.
+            </p>
+            <div
+              class="flex items-center text-blue-600 dark:text-blue-400 font-mono"
+            >
+              <span>Try it now</span>
+              <svg
+                class="w-4 h-4 ml-2 transform group-hover:translate-x-1 transition-transform"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </a>
+
+      <!-- Fractionated Morse -->
+      <a href="/fractionated-morse" class="group">
+        <div
+          class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300 hover:border-blue-500 dark:hover:border-blue-400"
+        >
+          <div class="p-6">
+            <h3
+              class="text-xl font-mono font-semibold mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"
+            >
+              Fractionated Morse
+            </h3>
+            <p class="text-gray-600 dark:text-gray-300 mb-4 font-mono">
+              A complex substitution cipher that uses Morse code as an
+              intermediate step.
+            </p>
+            <div
+              class="flex items-center text-blue-600 dark:text-blue-400 font-mono"
+            >
+              <span>Coming soon</span>
+            </div>
+          </div>
+        </div>
+      </a>
+
+      <!-- Columnar Transposition -->
+      <a href="/columnar" class="group">
+        <div
+          class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300 hover:border-blue-500 dark:hover:border-blue-400"
+        >
+          <div class="p-6">
+            <h3
+              class="text-xl font-mono font-semibold mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"
+            >
+              Columnar Transposition
+            </h3>
+            <p class="text-gray-600 dark:text-gray-300 mb-4 font-mono">
+              A transposition cipher that rearranges letters in columns
+              according to a keyword.
+            </p>
+            <div
+              class="flex items-center text-blue-600 dark:text-blue-400 font-mono"
+            >
+              <span>Coming soon</span>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Sample Puzzle Preview -->
+    <div
+      class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-16"
+    >
+      <h2
+        class="text-2xl font-mono font-semibold mb-4 text-gray-900 dark:text-gray-100"
+      >
+        Try a Sample Puzzle
+      </h2>
+      <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 font-mono text-sm">
+        {samplePuzzles[0].cipherText}
+      </div>
+      <div class="mt-4 text-center">
+        <a
+          href="/aristocrat"
+          class="inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors font-mono"
+        >
+          Solve Now
+        </a>
+      </div>
+    </div>
+  </div>
 </Layout>

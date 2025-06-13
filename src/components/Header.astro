@@ -1,20 +1,26 @@
 ---
 // Navigation items
 const navItems = [
-  { name: "Ciphers", href: "/ciphers" },
-  { name: "Learn", href: "/learn" },
-  { name: "Tools", href: "/tools" },
+  { name: "Aristocrat", href: "/aristocrat" },
+  { name: "Fractionated Morse", href: "/fractionated-morse" },
+  { name: "Columnar", href: "/columnar" },
   { name: "About", href: "/about" },
 ];
 ---
 
-<header class="border-b bg-white">
+<header
+  class="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+>
   <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
     <div class="flex h-16 items-center justify-between">
       <!-- Logo/Home Link -->
       <div class="flex-shrink-0">
-        <a href="/" class="flex items-center">
-          <span class="text-2xl font-bold text-gray-900">Ciphered</span>
+        <a href="/" class="flex items-center group">
+          <span
+            class="text-2xl font-mono font-bold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"
+          >
+            CIPHERED
+          </span>
         </a>
       </div>
 
@@ -24,7 +30,7 @@ const navItems = [
           navItems.map((item) => (
             <a
               href={item.href}
-              class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 hover:text-gray-600 hover:border-b-2 hover:border-gray-600 transition-colors"
+              class="inline-flex items-center px-1 pt-1 text-sm font-mono text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
             >
               {item.name}
             </a>
@@ -36,7 +42,7 @@ const navItems = [
       <div class="flex md:hidden">
         <button
           type="button"
-          class="inline-flex items-center justify-center rounded-md p-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+          class="inline-flex items-center justify-center rounded-md p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400"
           aria-controls="mobile-menu"
           aria-expanded="false"
         >
@@ -61,13 +67,13 @@ const navItems = [
   </div>
 
   <!-- Mobile menu -->
-  <div class="md:hidden" id="mobile-menu">
+  <div class="md:hidden hidden" id="mobile-menu">
     <div class="space-y-1 pb-3 pt-2">
       {
         navItems.map((item) => (
           <a
             href={item.href}
-            class="block border-l-4 border-transparent py-2 pl-3 pr-4 text-base font-medium text-gray-700 hover:border-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            class="block border-l-4 border-transparent py-2 pl-3 pr-4 text-base font-mono text-gray-600 dark:text-gray-300 hover:border-blue-600 dark:hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400"
           >
             {item.name}
           </a>

@@ -2,20 +2,7 @@
 import Layout from "../layouts/Layout.astro";
 import AristocratSolver from "../components/AristocratSolver";
 
-// Sample encrypted text for demonstration
-const sampleText = "A DEGHASDFA";
-const letters = Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-
-// Mock frequency data - we'll calculate this dynamically later
-const frequencies: Record<string, number> = {
-  A: 3,
-  D: 2,
-  E: 1,
-  F: 1,
-  G: 1,
-  H: 1,
-  S: 1,
-};
+const publicPatternUrl = import.meta.env.PUBLIC_PATTERN_URL;
 ---
 
 <Layout title="Aristocrat | Ciphered">
@@ -27,6 +14,6 @@ const frequencies: Record<string, number> = {
       </p> -->
     </div>
 
-    <AristocratSolver client:load />
+    <AristocratSolver client:load patternURL={publicPatternUrl} />
   </main>
 </Layout>
