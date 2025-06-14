@@ -24,7 +24,7 @@ jobs:
         run: npm run build
 
       - name: Create archive
-        run: tar -czf dist.tar.gz ./
+        run: tar -czf dist.tar.gz --exclude='dist.tar.gz' --exclude='.git' node_modules dist package.json package-lock.json
 
       - name: Setup SSH
         run: |
