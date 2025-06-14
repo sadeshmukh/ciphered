@@ -38,6 +38,7 @@ export function getWordPattern(word: string): string {
   const seen = new Map<string, number>();
   let nextNum = 1;
   return Array.from(word)
+    .filter((char) => /[A-Z]/.test(char))
     .map((char) => {
       if (!seen.has(char)) {
         seen.set(char, nextNum++);

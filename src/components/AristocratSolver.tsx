@@ -464,47 +464,16 @@ export default function AristocratSolver(props: Props = {}) {
                           <div
                             className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                             onMouseEnter={() => debouncedFetchPattern(pattern)}
+                            onClick={() => {
+                              setCurrentWordPattern({
+                                pattern,
+                                word,
+                              });
+                              setShowWordModal(true);
+                            }}
                           >
-                            <div className="bg-white dark:bg-gray-700 p-2 rounded shadow-lg max-w-xs">
-                              <div className="text-gray-500 dark:text-gray-400 mb-1">
-                                {pattern}
-                              </div>
-                              {isLoadingPatterns ? (
-                                <div className="text-sm text-gray-400 dark:text-gray-500">
-                                  Loading...
-                                </div>
-                              ) : (
-                                <div className="text-sm">
-                                  {getFilteredWords(pattern, word)
-                                    .slice(0, 3)
-                                    .map((word, idx) => (
-                                      <div
-                                        key={idx}
-                                        className="text-gray-700 dark:text-gray-300"
-                                      >
-                                        {word}
-                                      </div>
-                                    ))}
-                                  {getFilteredWords(pattern, word).length >
-                                    3 && (
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setCurrentWordPattern({
-                                          pattern,
-                                          word,
-                                        });
-                                        setShowWordModal(true);
-                                      }}
-                                      className="text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 text-sm mt-1"
-                                    >
-                                      See all{" "}
-                                      {getFilteredWords(pattern, word).length}{" "}
-                                      options
-                                    </button>
-                                  )}
-                                </div>
-                              )}
+                            <div className="bg-white dark:bg-gray-700 px-1.5 py-0.5 rounded shadow-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 text-xs text-gray-500 dark:text-gray-400">
+                              {pattern}
                             </div>
                           </div>
                         </div>
@@ -528,7 +497,7 @@ export default function AristocratSolver(props: Props = {}) {
                       return (
                         <span
                           key={wordIndex}
-                          className="w-[1ch] text-center mx-[1px] font-mono bg-gray-50 dark:bg-gray-700"
+                          className="w-[1ch] text-center mx-[1px] font-mono"
                         >
                           {word === " " ? "\u00A0" : word}
                         </span>
@@ -540,14 +509,20 @@ export default function AristocratSolver(props: Props = {}) {
                           {Array.from(word).map((char, charIndex) => (
                             <span
                               key={charIndex}
-                              className="w-[1ch] text-center mx-[1px] font-mono bg-gray-50 dark:bg-gray-700"
+                              className={`w-[1ch] text-center mx-[1px] font-mono ${
+                                /[A-Z]/.test(char)
+                                  ? "bg-gray-50 dark:bg-gray-700"
+                                  : ""
+                              }`}
                             >
-                              {substitutions[char] || "_"}
+                              {/[A-Z]/.test(char)
+                                ? substitutions[char] || "_"
+                                : char}
                             </span>
                           ))}
                         </div>
                         {wordIndex < line.split(" ").length - 1 && (
-                          <span className="w-[1ch] text-center mx-[1px] font-mono bg-gray-50 dark:bg-gray-700">
+                          <span className="w-[1ch] text-center mx-[1px] font-mono">
                             {" "}
                           </span>
                         )}
