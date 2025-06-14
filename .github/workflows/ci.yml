@@ -1,9 +1,7 @@
-name: CI
+name: Deploy
 
 on:
   push:
-    branches: [main]
-  pull_request:
     branches: [main]
 
 jobs:
@@ -26,7 +24,7 @@ jobs:
         run: npm run build
 
       - name: Create archive
-        run: tar -czf dist.tar.gz dist/
+        run: tar -czf dist.tar.gz ./
 
       - name: Setup SSH
         run: |
@@ -43,5 +41,5 @@ jobs:
 
       - name: Deploy to server
         run: |
-          scp dist.tar.gz deploy_host:/path/to/your/app/
-          ssh deploy_host "cd /path/to/your/app && tar -xzf dist.tar.gz --overwrite && rm dist.tar.gz"
+          scp dist.tar.gz deploy_host:~/ciphered/
+          ssh deploy_host "cd ~/ciphered && tar -xzf dist.tar.gz --overwrite && rm dist.tar.gz"
