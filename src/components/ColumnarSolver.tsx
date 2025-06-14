@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import React from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   DndContext,
   closestCenter,
@@ -8,7 +7,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import type { DragEndEvent } from "@dnd-kit/core";
+import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
@@ -18,6 +17,10 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useLocalStorage } from "../data/utils";
+import {
+  solveColumnarCipherAllDimensions,
+  type SolverCandidate,
+} from "../utils/columnarSolverLogic";
 
 interface Props {
   cipherText?: string;
@@ -32,62 +35,56 @@ type HighlightFn = (
 
 type ColumnarState = {
   dimensions: [number, number];
-  currentDimensionIndex: number;
   columnOrder: number[];
 };
 
-function SortableColumn({
-  id,
+function TableCell({
   children,
   className,
   highlightClass,
+  isDragging,
+  transform,
 }: {
-  id: number;
   children: React.ReactNode;
   className?: string;
   highlightClass?: string;
+  isDragging?: boolean;
+  transform?: string;
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
   return (
     <td
-      ref={setNodeRef}
-      style={style}
       className={`px-1 py-2 text-sm font-mono border dark:border-gray-700 text-gray-900 dark:text-gray-100 ${
         highlightClass || ""
       } ${className || ""}`}
+      style={{
+        opacity: isDragging ? 0.5 : 1,
+        transform: transform || undefined,
+      }}
     >
       {children}
     </td>
   );
 }
 
-function SortableHeader({ id }: { id: number }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id });
+function SortableHeader({
+  id,
+  onDragTransformChange,
+}: {
+  id: number;
+  onDragTransformChange?: (id: number, transform: string | undefined) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useSortable({ id });
+
+  useEffect(() => {
+    const transformString = transform
+      ? CSS.Transform.toString(transform)
+      : undefined;
+    onDragTransformChange?.(id, transformString);
+  }, [transform, id, onDragTransformChange]);
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
     opacity: isDragging ? 0.5 : 1,
   };
 
@@ -118,9 +115,18 @@ function SortableHeader({ id }: { id: number }) {
 export default function ColumnarSolver({
   cipherText: initialCipherText = "",
 }: Props) {
+  // just moved up here instead of dealing with the whole css mess
+  const TEXT_MUTED = "text-gray-600 dark:text-gray-400";
+  const TEXT_SMALL_MUTED = "text-sm text-gray-600 dark:text-gray-400";
+  const INPUT_CLASSES =
+    "border dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100";
+  const BUTTON_DISABLED =
+    "bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed";
+  const BUTTON_ENABLED =
+    "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600";
+
   const [state, setState] = useState<ColumnarState>({
     dimensions: [0, 0],
-    currentDimensionIndex: -1,
     columnOrder: [],
   });
   const [cipherText, setCipherText] = useLocalStorage(
@@ -131,6 +137,21 @@ export default function ColumnarSolver({
   const [wordInput, setWordInput] = useState("");
   const [hoveredCharIndex, setHoveredCharIndex] = useState<number | null>(null);
   const [isBoxHovered, setIsBoxHovered] = useState(false);
+  const [draggingColumnId, setDraggingColumnId] = useState<number | null>(null);
+  const [columnTransforms, setColumnTransforms] = useState<
+    Record<number, string | undefined>
+  >({});
+
+  // Solver state
+  const [solverResults, setSolverResults] = useState<SolverCandidate[]>([]);
+  const [isSolving, setIsSolving] = useState(false);
+  const [showSolverResults, setShowSolverResults] = useState(false);
+  const [currentSolvingDimension, setCurrentSolvingDimension] = useState<
+    [number, number] | null
+  >(null);
+
+  // Track when we're applying a solver result to prevent useEffect from overriding
+  const isApplyingSolverResult = useRef(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -140,7 +161,7 @@ export default function ColumnarSolver({
   );
 
   // I did not realize just how useful memo is
-  const possibleDimensions = React.useMemo(() => {
+  const possibleDimensions = useMemo(() => {
     if (!cipherText) return [];
     const length = cipherText.length;
     const dimensions: [number, number][] = [];
@@ -154,19 +175,33 @@ export default function ColumnarSolver({
     return dimensions;
   }, [cipherText]);
 
-  // reset column order when dimensions change
+  const currentDimensionIndex = useMemo(() => {
+    if (state.dimensions[0] === 0 || state.dimensions[1] === 0) {
+      return -1;
+    }
+    return possibleDimensions.findIndex(
+      ([r, c]) => r === state.dimensions[0] && c === state.dimensions[1]
+    );
+  }, [state.dimensions, possibleDimensions]);
+
+  // reset column order when dimensions change (but only if needed and not applying solver result)
   useEffect(() => {
-    if (state.dimensions[1] > 0) {
-      // ALWAYS create a fresh column order when dimensions change
+    if (
+      !isApplyingSolverResult.current &&
+      state.dimensions[1] > 0 &&
+      state.columnOrder.length !== state.dimensions[1]
+    ) {
       setState((prev) => ({
         ...prev,
         columnOrder: Array.from({ length: state.dimensions[1] }, (_, i) => i),
       }));
     }
+    // Reset the flag after the effect runs
+    isApplyingSolverResult.current = false;
   }, [state.dimensions]);
 
   // create table data based on dimensions
-  const tableData = React.useMemo(() => {
+  const tableData = useMemo(() => {
     if (!cipherText || state.dimensions[0] === 0 || state.dimensions[1] === 0)
       return [];
 
@@ -189,33 +224,20 @@ export default function ColumnarSolver({
     return data;
   }, [cipherText, state.dimensions]);
 
-  useEffect(() => {
-    if (state.dimensions[0] === 0 || state.dimensions[1] === 0) {
-      setState((prev) => ({ ...prev, currentDimensionIndex: -1 }));
-      return;
-    }
-
-    const index = possibleDimensions.findIndex(
-      ([r, c]) => r === state.dimensions[0] && c === state.dimensions[1]
-    );
-    setState((prev) => ({ ...prev, currentDimensionIndex: index }));
-  }, [state.dimensions, possibleDimensions]);
-
   const navigateDimensions = (direction: "prev" | "next") => {
     if (possibleDimensions.length === 0) return;
 
-    let newIndex = state.currentDimensionIndex;
+    let newIndex = currentDimensionIndex;
     if (direction === "next") {
-      newIndex = (state.currentDimensionIndex + 1) % possibleDimensions.length;
+      newIndex = (currentDimensionIndex + 1) % possibleDimensions.length;
     } else {
       newIndex =
-        (state.currentDimensionIndex - 1 + possibleDimensions.length) %
+        (currentDimensionIndex - 1 + possibleDimensions.length) %
         possibleDimensions.length;
     }
 
     setState((prev) => ({
       ...prev,
-      currentDimensionIndex: newIndex,
       dimensions: possibleDimensions[newIndex],
     }));
   };
@@ -243,8 +265,15 @@ export default function ColumnarSolver({
     setState((prev) => ({ ...prev, dimensions: newDimensions }));
   };
 
+  const handleDragStart = (event: DragStartEvent) => {
+    setDraggingColumnId(Number(event.active.id));
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+
+    setDraggingColumnId(null);
+    setColumnTransforms({});
 
     if (over && active.id !== over.id) {
       setState((prev) => {
@@ -258,7 +287,7 @@ export default function ColumnarSolver({
     }
   };
 
-  const reorderedTableData = React.useMemo(() => {
+  const reorderedTableData = useMemo(() => {
     if (!tableData.length || !state.columnOrder.length) return tableData;
 
     return tableData.map((row) =>
@@ -266,12 +295,57 @@ export default function ColumnarSolver({
     );
   }, [tableData, state.columnOrder]);
 
-  // get transposed text
-  const transposedText = React.useMemo(() => {
+  // helper highlight function
+  const getCharHighlightClass = (char: string): string => {
+    if (hoveredCharIndex !== null && char === wordInput[hoveredCharIndex]) {
+      return "bg-blue-500 dark:bg-blue-500";
+    } else if (isBoxHovered && wordInput.includes(char)) {
+      return "bg-green-500 dark:bg-green-500";
+    }
+    return "";
+  };
+
+  const transposedText = useMemo(() => {
     if (!reorderedTableData.length) return "";
 
     return reorderedTableData.map((row) => row.join("")).join("");
   }, [reorderedTableData]);
+
+  const runAutomaticSolver = async () => {
+    if (!cipherText) {
+      return;
+    }
+
+    setIsSolving(true);
+    setSolverResults([]);
+    setShowSolverResults(true);
+    setCurrentSolvingDimension(null);
+
+    try {
+      const results = await solveColumnarCipherAllDimensions(
+        cipherText,
+        (progress, dimension) => {
+          setCurrentSolvingDimension(dimension);
+        }
+      );
+      setSolverResults(results);
+    } catch (error) {
+      console.error("Error running solver:", error);
+    } finally {
+      setIsSolving(false);
+      setCurrentSolvingDimension(null);
+    }
+  };
+
+  const applySolverResult = (candidate: SolverCandidate) => {
+    isApplyingSolverResult.current = true;
+    setState((prev) => ({
+      ...prev,
+      dimensions: candidate.dimensions,
+      columnOrder: candidate.columnOrder,
+    }));
+    setShowSolverResults(false);
+  };
 
   const highlightBottomRowX: HighlightFn = (row, col, content, data) => {
     if (row === data.length - 1 && content === "X") {
@@ -286,28 +360,13 @@ export default function ColumnarSolver({
     content: string,
     data: string[][]
   ) => {
-    if (hoveredCharIndex !== null && content === wordInput[hoveredCharIndex]) {
-      return "bg-blue-500 dark:bg-blue-500";
-    }
-    return null;
-  };
-
-  const highlightAnyChar = (
-    row: number,
-    col: number,
-    content: string,
-    data: string[][]
-  ) => {
-    if (isBoxHovered && Array.from(wordInput).includes(content)) {
-      return "bg-green-500 dark:bg-green-500";
-    }
-    return null;
+    const highlight = getCharHighlightClass(content);
+    return highlight || null;
   };
 
   const highlightFunctions: HighlightFn[] = [
     highlightBottomRowX,
     highlightChar,
-    highlightAnyChar,
   ];
 
   // get the first non-null highlight
@@ -365,7 +424,7 @@ export default function ColumnarSolver({
         )}
 
         <div className="mb-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+          <div className={`${TEXT_SMALL_MUTED} mb-2`}>
             Dimensions (rows × columns)
           </div>
           <div className="flex gap-4 items-center">
@@ -395,10 +454,7 @@ export default function ColumnarSolver({
                 placeholder="rows"
                 aria-label="Number of rows"
               />
-              <span
-                className="text-gray-600 dark:text-gray-400"
-                aria-hidden="true"
-              >
+              <span className={TEXT_MUTED} aria-hidden="true">
                 ×
               </span>
               <input
@@ -448,6 +504,7 @@ export default function ColumnarSolver({
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
+                  onDragStart={handleDragStart}
                   onDragEnd={handleDragEnd}
                 >
                   <SortableContext
@@ -467,8 +524,17 @@ export default function ColumnarSolver({
                       </colgroup>
                       <thead>
                         <tr>
-                          {state.columnOrder.map((colIndex, index) => (
-                            <SortableHeader key={index} id={colIndex} />
+                          {state.columnOrder.map((colIndex) => (
+                            <SortableHeader
+                              key={colIndex}
+                              id={colIndex}
+                              onDragTransformChange={(id, transform) => {
+                                setColumnTransforms((prev) => ({
+                                  ...prev,
+                                  [id]: transform,
+                                }));
+                              }}
+                            />
                           ))}
                         </tr>
                       </thead>
@@ -476,17 +542,23 @@ export default function ColumnarSolver({
                         {reorderedTableData.map((row, rowIndex) => (
                           <tr key={rowIndex}>
                             {row.map((cell, colIndex) => (
-                              <SortableColumn
+                              <TableCell
                                 key={colIndex}
-                                id={state.columnOrder[colIndex]}
                                 highlightClass={getCellHighlightClass(
                                   rowIndex,
                                   colIndex,
                                   cell
                                 )}
+                                isDragging={
+                                  draggingColumnId ===
+                                  state.columnOrder[colIndex]
+                                }
+                                transform={
+                                  columnTransforms[state.columnOrder[colIndex]]
+                                }
                               >
                                 {cell}
-                              </SortableColumn>
+                              </TableCell>
                             ))}
                           </tr>
                         ))}
@@ -505,22 +577,11 @@ export default function ColumnarSolver({
               Transposed Text
             </div>
             <div className="font-mono text-lg p-4 bg-gray-50 dark:bg-gray-800 rounded-lg break-all">
-              {transposedText.split("").map((char, index) => {
-                let highlightClass = "";
-                if (
-                  hoveredCharIndex !== null &&
-                  char === wordInput[hoveredCharIndex]
-                ) {
-                  highlightClass = "bg-blue-500 dark:bg-blue-500";
-                } else if (isBoxHovered && wordInput.includes(char)) {
-                  highlightClass = "bg-green-500 dark:bg-green-500";
-                }
-                return (
-                  <span key={index} className={highlightClass}>
-                    {char}
-                  </span>
-                );
-              })}
+              {transposedText.split("").map((char, index) => (
+                <span key={index} className={getCharHighlightClass(char)}>
+                  {char}
+                </span>
+              ))}
             </div>
           </div>
         )}
@@ -556,7 +617,169 @@ export default function ColumnarSolver({
             aria-label="Word input"
           />
         </div>
+
+        {/* autosolve */}
+        <div className="mt-6 pt-6 border-t dark:border-gray-600">
+          <div className="flex gap-2 items-center mb-2">
+            <button
+              onClick={runAutomaticSolver}
+              disabled={
+                isSolving || !cipherText || possibleDimensions.length === 0
+              }
+              className={`px-4 py-2 rounded transition font-medium text-sm ${
+                isSolving || !cipherText || possibleDimensions.length === 0
+                  ? BUTTON_DISABLED
+                  : "bg-blue-500 hover:bg-blue-600 text-white"
+              }`}
+            >
+              {isSolving ? "Solving..." : "🔍 Auto Solve All"}
+            </button>
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+            Tests all dimensions automatically
+          </div>
+          {isSolving && currentSolvingDimension && (
+            <div className="text-xs text-blue-600 dark:text-blue-400">
+              Checking {currentSolvingDimension[0]}×{currentSolvingDimension[1]}
+              ...
+            </div>
+          )}
+          {showSolverResults && (
+            <button
+              onClick={() => setShowSolverResults(false)}
+              className={`px-3 py-1 text-xs rounded transition ${BUTTON_ENABLED} mt-2`}
+            >
+              Hide Results
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* autosolve overlay */}
+      {showSolverResults && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[80vh] overflow-hidden">
+            <div className="flex justify-between items-center p-4 border-b dark:border-gray-600">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                Auto Solver Results
+              </h3>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {solverResults.length} high-scoring candidates found
+                </span>
+                <button
+                  onClick={() => setShowSolverResults(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {isSolving ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <div className="text-gray-600 dark:text-gray-400 mb-2">
+                  Analyzing all possible dimensions...
+                </div>
+                {currentSolvingDimension && (
+                  <div className="text-sm text-blue-600 dark:text-blue-400">
+                    Currently checking {currentSolvingDimension[0]}×
+                    {currentSolvingDimension[1]}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="p-4 overflow-y-auto max-h-[60vh]">
+                {solverResults.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    No high-scoring solutions found. The text may not be a
+                    columnar cipher, or it may require manual adjustment.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {solverResults.map((candidate, index) => (
+                      <div
+                        key={index}
+                        className={`rounded-lg p-4 border ${
+                          index === 0
+                            ? "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-600 ring-2 ring-yellow-200 dark:ring-yellow-700"
+                            : "bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                        }`}
+                      >
+                        <div className="mb-3">
+                          <div className="flex items-center gap-2">
+                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                              #{index + 1} - Score: {candidate.score.toFixed(2)}
+                            </div>
+                            {index === 0 && (
+                              <div className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 text-xs rounded-full font-medium">
+                                ⭐ Top Solution
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-600 dark:text-gray-400">
+                            Dimensions: {candidate.dimensions[0]}×
+                            {candidate.dimensions[1]} | Column order: [
+                            {candidate.columnOrder.map((c) => c + 1).join(", ")}
+                            ]
+                          </div>
+                        </div>
+
+                        {candidate.potentialFinalText ? (
+                          <div className="space-y-2 mb-3">
+                            <div className="text-xs font-medium text-blue-700 dark:text-blue-300">
+                              AI Formatted Text:
+                            </div>
+                            <div className="font-mono text-sm bg-blue-50 dark:bg-blue-900/20 p-3 rounded border border-blue-200 dark:border-blue-700 break-all max-h-20 overflow-y-auto">
+                              {candidate.potentialFinalText}
+                            </div>
+                            <div className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                              Raw Decrypted Text:
+                            </div>
+                            <div className="font-mono text-sm bg-white dark:bg-gray-600 p-3 rounded break-all max-h-20 overflow-y-auto">
+                              {candidate.decryptedText}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="font-mono text-sm bg-white dark:bg-gray-600 p-3 rounded mb-3 break-all max-h-20 overflow-y-auto">
+                            {candidate.decryptedText}
+                          </div>
+                        )}
+
+                        <div className="flex justify-between items-end">
+                          <div className="grid grid-cols-3 gap-4 text-xs">
+                            <div>
+                              <span className="font-medium">Bigrams:</span>{" "}
+                              {candidate.scores.bigrams}
+                            </div>
+                            <div>
+                              <span className="font-medium">Trigrams:</span>{" "}
+                              {candidate.scores.trigrams}
+                            </div>
+                            <div>
+                              <span className="font-medium">
+                                Double Letters:
+                              </span>{" "}
+                              {candidate.scores.doubleLetters}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => applySolverResult(candidate)}
+                            className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded font-medium transition"
+                          >
+                            Apply
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
