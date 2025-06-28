@@ -5,7 +5,6 @@ import { samplePuzzles } from "../data/samplePuzzles";
 
 <Layout title="Ciphered - Cryptogram Solving Tools">
   <div class="max-w-6xl mx-auto">
-    <!-- Hero Section -->
     <div class="text-center mb-16">
       <h1
         class="text-6xl font-mono font-bold mb-4 text-gray-900 dark:text-gray-100"
@@ -15,14 +14,11 @@ import { samplePuzzles } from "../data/samplePuzzles";
       <p
         class="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto font-mono"
       >
-        A collection of tools to help you solve cryptograms by hand. No AI, no
-        shortcuts - just good old-fashioned puzzle solving.
+        A collection of tools to help you solve cryptograms by hand.
       </p>
     </div>
 
-    <!-- Tools Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
-      <!-- Aristocrat Cipher -->
       <a href="/aristocrat" class="group">
         <div
           class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300 hover:border-blue-500 dark:hover:border-blue-400"
@@ -58,7 +54,6 @@ import { samplePuzzles } from "../data/samplePuzzles";
         </div>
       </a>
 
-      <!-- Fractionated Morse -->
       <a href="/fractionated-morse" class="group">
         <div
           class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300 hover:border-blue-500 dark:hover:border-blue-400"
@@ -76,13 +71,12 @@ import { samplePuzzles } from "../data/samplePuzzles";
             <div
               class="flex items-center text-blue-600 dark:text-blue-400 font-mono"
             >
-              <span>Coming soon</span>
+              <span>Try it now &gt;</span>
             </div>
           </div>
         </div>
       </a>
 
-      <!-- Columnar Transposition -->
       <a href="/columnar" class="group">
         <div
           class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300 hover:border-blue-500 dark:hover:border-blue-400"
@@ -100,21 +94,20 @@ import { samplePuzzles } from "../data/samplePuzzles";
             <div
               class="flex items-center text-blue-600 dark:text-blue-400 font-mono"
             >
-              <span>Coming soon</span>
+              <span>Try it now &gt;</span>
             </div>
           </div>
         </div>
       </a>
     </div>
 
-    <!-- Sample Puzzle Preview -->
     <div
       class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-16"
     >
       <h2
         class="text-2xl font-mono font-semibold mb-4 text-gray-900 dark:text-gray-100"
       >
-        Try a Sample Puzzle
+        Try a Sample Aristocrat
       </h2>
       <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 font-mono text-sm">
         {samplePuzzles[0].cipherText}

@@ -1,47 +1,74 @@
-# Astro Starter Kit: Minimal
+# Ciphered
 
-```sh
-npm create astro@latest -- --template minimal
+A modern web application providing interactive tools for solving cryptograms. Built with Astro, React, and TailwindCSS.
+
+![Built by @sadeshmukh](https://img.shields.io/badge/built%20with%20%E2%9D%A4%EF%B8%8F%20by-@sadeshmukh-blue)
+
+## Features
+
+- **Aristocrat Solver**: Interactive tool for solving monoalphabetic substitution ciphers
+
+  - Frequency analysis
+  - Pattern matching
+  - Sample puzzles
+  - Progress tracking with timer
+  - Caesar cipher mode
+
+- **Columnar Transposition Solver**: Tool for solving columnar transposition ciphers
+
+  - Automatic dimension analysis
+  - Drag-and-drop column reordering
+  - Multiple solution candidates
+  - Scoring based on n-grams and patterns
+
+- **Fractionated Morse Solver**: Tool for solving fractionated Morse ciphers
+  - Interactive Morse code triplet mapping
+  - Real-time decoding
+  - Visual separation of Morse patterns
+
+You can try a live demo [here](https://ciphered.sahil.ink).
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v20 or later recommended)
+- npm
+
+### Installation
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/sadeshmukh/ciphered.git
+cd ciphered
 ```
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/withastro/astro/tree/latest/examples/minimal)
-[![Open with CodeSandbox](https://assets.codesandbox.io/github/button-edit-lime.svg)](https://codesandbox.io/p/sandbox/github/withastro/astro/tree/latest/examples/minimal)
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/withastro/astro?devcontainer_path=.devcontainer/minimal/devcontainer.json)
+2. Install dependencies:
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
-
-## 🚀 Project Structure
-
-Inside of your Astro project, you'll see the following folders and files:
-
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
+```bash
+npm install
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+3. Start the development server:
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+```bash
+npm run dev
+```
 
-Any static assets, like images, can be placed in the `public/` directory.
+4. Build for production:
 
-## 🧞 Commands
+```bash
+npm run build
+```
 
-All commands are run from the root of the project, from a terminal:
+## Tech Stack
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+- [Astro](https://astro.build/) - Web framework
+- [React](https://reactjs.org/) - UI components
+- [TailwindCSS](https://tailwindcss.com/) - Styling
+- [@dnd-kit](https://dndkit.com/) - Drag and drop functionality
 
-## 👀 Want to learn more?
+## Contributing
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+Contributions are welcome! Please feel free to submit a Pull Request.
