@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { samplePuzzles } from "../data/samplePuzzles";
 import { useLocalStorage, getWordPattern } from "../data/utils";
+import { cipherDocs } from "../data/cipherDocs";
 import CipherDocsPanel from "./CipherDocsPanel";
 import React from "react";
 
@@ -12,6 +13,41 @@ interface Props {
 interface PatternWords {
   [pattern: string]: string[];
 }
+
+interface HintSuggestion {
+  type:
+    | "digraph"
+    | "trigraph"
+    | "pattern"
+    | "frequency"
+    | "structure"
+    | "apostrophe";
+  title: string;
+  description: string;
+  positions: number[];
+  confidence: "high" | "medium" | "low";
+  details?: string;
+}
+
+const getDigraphs = () =>
+  cipherDocs.find((doc) => doc.title === "Common Digraphs")?.items || []; // .find my goat
+const getTrigraphs = () =>
+  cipherDocs.find((doc) => doc.title === "Common Trigraphs")?.items || [];
+const getCommonWords = () => {
+  const commonWordsSection = cipherDocs.find(
+    (doc) => doc.title === "Common Words"
+  );
+  return {
+    twoLetter:
+      commonWordsSection?.subsections?.find((sub) => sub.title === "2 letters")
+        ?.items || [],
+    threeLetter:
+      commonWordsSection?.subsections?.find((sub) => sub.title === "3 letters")
+        ?.items || [],
+  };
+};
+const getCommonEndings = () =>
+  cipherDocs.find((doc) => doc.title === "Common Endings")?.items || [];
 
 export default function AristocratSolver(props: Props = {}) {
   const { cipherText: initialCipherText, patternURL } = props;
@@ -53,6 +89,11 @@ export default function AristocratSolver(props: Props = {}) {
   } | null>(null);
   const [isReporting, setIsReporting] = useState(false);
 
+  // HINT SYSTEM
+  const [showHintPanel, setShowHintPanel] = useState(false);
+  const [hintSuggestions, setHintSuggestions] = useState<HintSuggestion[]>([]);
+  const [maxHintsToShow, setMaxHintsToShow] = useState(5);
+
   // Memoize frequency calculation
   const frequencies = useMemo(() => {
     const freqs: Record<string, number> = {};
@@ -63,6 +104,283 @@ export default function AristocratSolver(props: Props = {}) {
     });
     return freqs;
   }, [cipherText]);
+
+  // check if all letters in the cipher pattern are already solved
+  const areAllLettersFilled = (cipherPattern: string) => {
+    for (const letter of cipherPattern.replace(/[^A-Z]/g, "")) {
+      if (!substitutions[letter]) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const generateHints = useMemo(() => {
+    const hints: HintSuggestion[] = [];
+    const cleanText = cipherText.replace(/\s+/g, " ").trim();
+    const words = cleanText.split(" ");
+
+    // digraphs
+    const digraphCounts: Record<string, number[]> = {};
+    for (let i = 0; i < cleanText.length - 1; i++) {
+      if (cleanText[i] !== " " && cleanText[i + 1] !== " ") {
+        const digraph = cleanText.slice(i, i + 2);
+
+        // check if this is part of a longer word
+        const prevChar = i > 0 ? cleanText[i - 1] : " ";
+        const nextChar = i + 2 < cleanText.length ? cleanText[i + 2] : " ";
+        const isPartOfLongerWord = prevChar !== " " || nextChar !== " ";
+
+        if (isPartOfLongerWord) {
+          if (!digraphCounts[digraph]) digraphCounts[digraph] = [];
+          digraphCounts[digraph].push(i);
+        }
+      }
+    }
+
+    Object.entries(digraphCounts).forEach(([digraph, positions]) => {
+      if (positions.length >= 3) {
+        const commonDigraphs = getDigraphs().slice(0, 5);
+        if (!areAllLettersFilled(digraph)) {
+          hints.push({
+            type: "digraph",
+            title: `Repeated digraph: ${digraph}`,
+            description: `This 2-letter combination appears ${
+              positions.length
+            } times within words. Common digraphs: ${commonDigraphs.join(
+              ", "
+            )}.`,
+            positions,
+            confidence: positions.length >= 4 ? "high" : "medium",
+            details: `Most frequent: TH, HE, AN, IN, ER.`,
+          });
+        }
+      }
+    });
+
+    // trigraphs - repeated 3-letter combinations (within words, not standalone 3-letter words)
+    const trigraphCounts: Record<string, number[]> = {};
+    for (let i = 0; i < cleanText.length - 2; i++) {
+      if (
+        cleanText[i] !== " " &&
+        cleanText[i + 1] !== " " &&
+        cleanText[i + 2] !== " "
+      ) {
+        const trigraph = cleanText.slice(i, i + 3);
+
+        // check if this is part of a longer word (not a standalone 3-letter word)
+        const prevChar = i > 0 ? cleanText[i - 1] : " ";
+        const nextChar = i + 3 < cleanText.length ? cleanText[i + 3] : " ";
+        const isPartOfLongerWord = prevChar !== " " || nextChar !== " ";
+
+        if (isPartOfLongerWord) {
+          if (!trigraphCounts[trigraph]) trigraphCounts[trigraph] = [];
+          trigraphCounts[trigraph].push(i);
+        }
+      }
+    }
+
+    Object.entries(trigraphCounts).forEach(([trigraph, positions]) => {
+      if (positions.length >= 3) {
+        const commonTrigraphs = getTrigraphs().slice(0, 5);
+        if (!areAllLettersFilled(trigraph)) {
+          hints.push({
+            type: "trigraph",
+            title: `Repeated trigraph: ${trigraph}`,
+            description: `This 3-letter combination appears ${
+              positions.length
+            } times within words. Common trigraphs: ${commonTrigraphs.join(
+              ", "
+            )}.`,
+            positions,
+            confidence: positions.length >= 4 ? "high" : "medium",
+            details: `Most frequent: THE, ING, AND, ION, ENT.`,
+          });
+        }
+      }
+    });
+
+    // double letters - consecutive identical letters
+    const doubleLetterCounts: Record<string, number[]> = {};
+    for (let i = 0; i < cleanText.length - 1; i++) {
+      if (cleanText[i] !== " " && cleanText[i] === cleanText[i + 1]) {
+        const doubleLetter = cleanText[i] + cleanText[i + 1];
+        if (!doubleLetterCounts[doubleLetter])
+          doubleLetterCounts[doubleLetter] = [];
+        doubleLetterCounts[doubleLetter].push(i);
+      }
+    }
+
+    const getDoubleLetters = () =>
+      cipherDocs.find((doc) => doc.title === "Double Letters")?.items || [];
+
+    Object.entries(doubleLetterCounts).forEach(([doubleLetter, positions]) => {
+      if (positions.length >= 3) {
+        const commonDoubleLetters = getDoubleLetters().slice(0, 6);
+        if (!areAllLettersFilled(doubleLetter)) {
+          hints.push({
+            type: "structure",
+            title: `Double letters: ${doubleLetter}`,
+            description: `This double letter appears ${
+              positions.length
+            } times. Common double letters: ${commonDoubleLetters.join(", ")}.`,
+            positions,
+            confidence: positions.length >= 4 ? "high" : "medium",
+            details: `LL, SS, EE, TT, OO.`,
+          });
+        }
+      }
+    });
+
+    // single letter words
+    words.forEach((word, wordIndex) => {
+      if (word.length === 1) {
+        const wordStart = cleanText.indexOf(word);
+        const examples = ["A", "I"];
+        if (!areAllLettersFilled(word)) {
+          hints.push({
+            type: "structure",
+            title: `Single letter word: ${word}`,
+            description: `Single letter words are almost always 'A' or 'I' in English.`,
+            positions: [wordStart],
+            confidence: "high",
+            details: `do this now!`,
+          });
+        }
+      }
+    });
+
+    // double letter words
+    words.forEach((word, wordIndex) => {
+      if (word.length === 2) {
+        const wordStart = cleanText.indexOf(word);
+        const commonWords = getCommonWords();
+        const examples = commonWords.twoLetter.slice(0, 6); // OF, TO, IN, IT, IS, BE
+        if (!areAllLettersFilled(word)) {
+          hints.push({
+            type: "structure",
+            title: `Double letter word: ${word}`,
+            description: `Common 2-letter words: ${examples.join(", ")}.`,
+            positions: [wordStart],
+            confidence: "high",
+            details: `do this now!`,
+          });
+        }
+      }
+    });
+
+    // word endings (up to 4 letters)
+    const commonEndings = getCommonEndings();
+    const endingExamples = {
+      ING: ["THING", "GOING", "BEING"],
+      TION: ["NATION", "ACTION", "MOTION"],
+      ABLE: ["TABLE", "ABLE", "CABLE"],
+      MENT: ["MOMENT", "COMMENT"],
+      LY: ["ONLY", "VERY", "REALLY"],
+      ED: ["USED", "MOVED", "ASKED"],
+      ER: ["NEVER", "OTHER", "WATER"],
+      EST: ["BEST", "REST", "TEST"],
+      ANT: ["WANT", "GIANT", "PLANT"],
+      ENT: ["WENT", "SENT", "RENT"],
+    };
+
+    words.forEach((word) => {
+      if (word.length >= 4) {
+        for (let len = 2; len <= 4; len++) {
+          const ending = word.slice(-len);
+          const matchingEndings = commonEndings.filter((e) =>
+            e.endsWith(ending.replace("-", ""))
+          );
+
+          if (matchingEndings.length > 0) {
+            const endingKey = matchingEndings[0].replace("-", "");
+            const examples =
+              endingExamples[endingKey as keyof typeof endingExamples] || [];
+
+            if (!areAllLettersFilled(word)) {
+              const wordStart = cleanText.indexOf(word);
+              hints.push({
+                type: "structure",
+                title: `Word ending: ${word}`,
+                description: `Ends with "${ending}" - could be ${matchingEndings.join(
+                  ", "
+                )}. Examples: ${examples.join(", ")}.`,
+                positions: [wordStart],
+                confidence: len >= 3 ? "high" : "medium",
+                details: ``,
+              });
+              break; // only suggest one ending per word
+            }
+          }
+        }
+      }
+    });
+
+    // repeated words
+    const wordCounts = words.reduce((acc, word) => {
+      if (word.length >= 3) {
+        acc[word] = (acc[word] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    Object.entries(wordCounts).forEach(([word, count]) => {
+      if (count >= 3) {
+        const commonWords = getCommonWords();
+        const examples =
+          word.length === 2
+            ? commonWords.twoLetter.slice(0, 4)
+            : word.length === 3
+            ? commonWords.threeLetter.slice(0, 4)
+            : ["THE", "AND", "FOR", "ARE"];
+
+        if (!areAllLettersFilled(word)) {
+          hints.push({
+            type: "frequency",
+            title: `Repeated word: ${word}`,
+            description: `This ${
+              word.length
+            }-letter word appears ${count} times. Common ${
+              word.length
+            }-letter words: ${examples.join(", ")}.`,
+            positions: [cleanText.indexOf(word)],
+            confidence: count >= 4 ? "high" : "medium",
+            details: `click the ciphertext to see possible pattern matches`,
+          });
+        }
+      }
+    });
+
+    // contractions
+    const apostropheMatches = cleanText.match(/\w+'\w+/g);
+    if (apostropheMatches) {
+      apostropheMatches.forEach((match) => {
+        const examples = ["CAN'T", "DON'T", "WON'T", "IT'S", "THAT'S"];
+        if (!areAllLettersFilled(match)) {
+          const position = cleanText.indexOf(match);
+          hints.push({
+            type: "apostrophe",
+            title: `Contraction: ${match}`,
+            description: `Contractions: ${examples.join(", ")}.`,
+            positions: [position],
+            confidence: "high",
+            details: `common contractions: N'T, 'S, 'RE, 'VE, 'LL, 'D.`,
+          });
+        }
+      });
+    }
+
+    return hints.sort((a, b) => {
+      const confidenceOrder = { high: 3, medium: 2, low: 1 };
+      const scoreA = confidenceOrder[a.confidence] + a.positions.length * 0.1;
+      const scoreB = confidenceOrder[b.confidence] + b.positions.length * 0.1;
+      return scoreB - scoreA;
+    });
+  }, [cipherText, substitutions]);
+
+  useEffect(() => {
+    setHintSuggestions(generateHints);
+  }, [generateHints]);
 
   useEffect(() => {
     const updateCharsPerLine = () => {
@@ -379,7 +697,7 @@ export default function AristocratSolver(props: Props = {}) {
         ref={containerRef}
       >
         <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center gap-2 relative z-[60]">
+          <div className="flex items-center gap-2 relative">
             <button
               onClick={() => setIsEditingCipherText(!isEditingCipherText)}
               className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white transition"
@@ -535,6 +853,102 @@ export default function AristocratSolver(props: Props = {}) {
           ))}
         </div>
 
+        {/* hint system */}
+        <div className="mb-6 border-t pt-6">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                Hints:
+              </div>
+            </div>
+            <button
+              onClick={() => setShowHintPanel(!showHintPanel)}
+              className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white transition"
+            >
+              <span>{showHintPanel ? "▼" : "▶"} Smart Hints</span>
+              <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded">
+                {hintSuggestions.length}
+              </span>
+            </button>
+          </div>
+
+          {showHintPanel && (
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 mb-4">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Solving Hints
+                </h3>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-gray-600 dark:text-gray-400">
+                    Show:
+                  </label>
+                  <select
+                    value={maxHintsToShow}
+                    onChange={(e) => setMaxHintsToShow(Number(e.target.value))}
+                    className="px-2 py-1 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+                  >
+                    <option value={3}>Top 3</option>
+                    <option value={5}>Top 5</option>
+                    <option value={10}>Top 10</option>
+                    <option value={99}>All</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {hintSuggestions.slice(0, maxHintsToShow).map((hint, index) => (
+                  <div
+                    key={index}
+                    className={`p-3 rounded-lg border-l-4 ${
+                      hint.confidence === "high"
+                        ? "bg-green-50 dark:bg-green-900/20 border-green-500"
+                        : hint.confidence === "medium"
+                        ? "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500"
+                        : "bg-gray-50 dark:bg-gray-800 border-gray-400"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <h4 className="font-semibold text-gray-900 dark:text-gray-100">
+                        {hint.title}
+                      </h4>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-xs px-2 py-1 rounded ${
+                            hint.confidence === "high"
+                              ? "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100"
+                              : hint.confidence === "medium"
+                              ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100"
+                              : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100"
+                          }`}
+                        >
+                          {hint.confidence}
+                        </span>
+                        <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100">
+                          {hint.type}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                      {hint.description}
+                    </p>
+                    {hint.details && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 italic">
+                        {hint.details}
+                      </p>
+                    )}
+                  </div>
+                ))}
+                {hintSuggestions.length === 0 && (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    No hints available. Try entering a cipher text to get
+                    started.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="flex gap-4 mb-8">
           <button
             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
@@ -571,7 +985,7 @@ export default function AristocratSolver(props: Props = {}) {
               }`}
               onClick={() => setIsEditableSubHeader(!isEditableSubHeader)}
             >
-              {isEditableSubHeader ? "Lock" : "Unlock"}
+              {isEditableSubHeader ? "Switch to K1" : "Switch to K2/K3"}
             </button>
             <button
               className={`text-sm px-3 py-1 rounded transition ${
