@@ -16,8 +16,7 @@ This project focuses on 3 ciphers: the simple substitution cipher (aristocrat), 
 
 ## What does it do?
 
-- Aristocrats
-  A suite of nice-to-have tools for solving monoalphabetic substitution ciphers.
+- Aristocrats: A suite of nice-to-have tools for solving monoalphabetic substitution ciphers.
 
   - Frequency analysis
   - Pattern matching (see ciphered-pattern-api) at https://github.com/sadeshmukh/ciphered-pattern-api
@@ -28,8 +27,7 @@ This project focuses on 3 ciphers: the simple substitution cipher (aristocrat), 
 
   ![Aristocrat Pattern Matching](https://raw.githubusercontent.com/sadeshmukh/ciphered/main/public/demo/aristocrat2.png)
 
-- Columnar Transposition
-  A simple tool for solving columnar transposition ciphers.
+- Columnar Transposition: A simple tool for solving columnar transposition ciphers.
 
   - Automatic dimension analysis
   - Highlights to quickly search for given patterns
@@ -38,8 +36,7 @@ This project focuses on 3 ciphers: the simple substitution cipher (aristocrat), 
 
   ![Columnar Transposition Highlights](https://raw.githubusercontent.com/sadeshmukh/ciphered/main/public/demo/columnar2.png)
 
-- Fractionated Morse
-  A tool for solving fractionated Morse ciphers.
+- Fractionated Morse: A tool for solving fractionated Morse ciphers.
 
   - Interactive Morse code triplet mapping
   - Real-time decoding
