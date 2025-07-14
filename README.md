@@ -4,31 +4,41 @@ A modern web application providing interactive tools for solving cryptograms. Bu
 
 ![Built by @sadeshmukh](https://img.shields.io/badge/built%20with%20%E2%9D%A4%EF%B8%8F%20by-@sadeshmukh-blue)
 
-## Features
+Try the demo [here](https://ciphered.sahil.ink)!
 
-- **Aristocrat Solver**: Interactive tool for solving monoalphabetic substitution ciphers
+## What does it do?
+
+- Aristocrats
+  A suite of nice-to-have tools for solving monoalphabetic substitution ciphers.
 
   - Frequency analysis
-  - Pattern matching
-  - Sample puzzles
-  - Progress tracking with timer
+  - Pattern matching (see ciphered-pattern-api) at https://github.com/sadeshmukh/ciphered-pattern-api
   - Caesar cipher mode
+  - Smart hints
 
-- **Columnar Transposition Solver**: Tool for solving columnar transposition ciphers
+  ![Aristocrat Solver](https://raw.githubusercontent.com/sadeshmukh/ciphered/main/public/demo/aristocrat.png)
+
+  ![Aristocrat Pattern Matching](https://raw.githubusercontent.com/sadeshmukh/ciphered/main/public/demo/aristocrat2.png)
+
+- Columnar Transposition
+  A simple tool for solving columnar transposition ciphers.
 
   - Automatic dimension analysis
-  - Drag-and-drop column reordering
-  - Multiple solution candidates
-  - Scoring based on n-grams and patterns
+  - Highlights to quickly search for given patterns
 
-- **Fractionated Morse Solver**: Tool for solving fractionated Morse ciphers
+  ![Columnar Transposition](https://raw.githubusercontent.com/sadeshmukh/ciphered/main/public/demo/columnar1.png)
+
+  ![Columnar Transposition Highlights](https://raw.githubusercontent.com/sadeshmukh/ciphered/main/public/demo/columnar2.png)
+
+- Fractionated Morse
+  A tool for solving fractionated Morse ciphers.
+
   - Interactive Morse code triplet mapping
   - Real-time decoding
-  - Visual separation of Morse patterns
 
-You can try a live demo [here](https://ciphered.sahil.ink).
+  ![Fractionated Morse](https://raw.githubusercontent.com/sadeshmukh/ciphered/main/public/demo/fractionated.png)
 
-## Getting Started
+## Development
 
 ### Prerequisites
 
@@ -62,12 +72,19 @@ npm run dev
 npm run build
 ```
 
+5. Serve build:
+
+```bash
+node dist/server/entry.mjs
+```
+
 ## Tech Stack
 
 - [Astro](https://astro.build/) - Web framework
 - [React](https://reactjs.org/) - UI components
 - [TailwindCSS](https://tailwindcss.com/) - Styling
 - [@dnd-kit](https://dndkit.com/) - Drag and drop functionality
+- [chartist](https://gionkunz.github.io/chartist-js/) - Charting
 
 ## Contributing
 

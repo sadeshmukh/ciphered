@@ -113,7 +113,8 @@ function SortableHeader({
 }
 
 export default function ColumnarSolver({
-  cipherText: initialCipherText = "",
+  cipherText:
+    initialCipherText = "FHTFMGNEMACNDASISHSHRFRLTCOSAETITAU9NFRHSTECOTOIIEOTEETAPNTT",
 }: Props) {
   // just moved up here instead of dealing with the whole css mess
   const TEXT_MUTED = "text-gray-600 dark:text-gray-400";
@@ -402,7 +403,20 @@ export default function ColumnarSolver({
               aria-expanded={isEditingCipherText}
               aria-controls="cipher-text-input"
             >
-              <span>{isEditingCipherText ? "▼" : "▶"} Edit Cipher Text</span>
+              <svg
+                className={`w-3 h-3 transition-transform ${
+                  isEditingCipherText ? "rotate-90" : ""
+                }`}
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <span>Edit Cipher Text</span>
             </button>
           </div>
         </div>

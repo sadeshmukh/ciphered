@@ -38,30 +38,72 @@ const navItems = [
         }
       </nav>
 
-      <!-- Mobile menu button -->
-      <div class="flex md:hidden">
+      <!-- Right side controls -->
+      <div class="flex items-center space-x-2">
+        <!-- Dark mode toggle -->
         <button
           type="button"
-          class="inline-flex items-center justify-center rounded-md p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400"
-          aria-controls="mobile-menu"
-          aria-expanded="false"
+          id="theme-toggle"
+          class="inline-flex items-center justify-center rounded-md p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+          aria-label="Toggle dark mode"
         >
-          <span class="sr-only">Open main menu</span>
-          <!-- Menu icon -->
+          <!-- Sun icon (visible in dark mode) -->
           <svg
-            class="h-6 w-6"
+            id="sun-icon"
+            class="h-5 w-5 hidden dark:block"
             fill="none"
             viewBox="0 0 24 24"
             stroke-width="1.5"
             stroke="currentColor"
-            aria-hidden="true"
           >
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
-              d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"></path>
+              d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"
+            ></path>
+          </svg>
+          <!-- Moon icon (visible in light mode) -->
+          <svg
+            id="moon-icon"
+            class="h-5 w-5 block dark:hidden"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"
+            ></path>
           </svg>
         </button>
+
+        <!-- Mobile menu button -->
+        <div class="flex md:hidden">
+          <button
+            type="button"
+            class="inline-flex items-center justify-center rounded-md p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400"
+            aria-controls="mobile-menu"
+            aria-expanded="false"
+          >
+            <span class="sr-only">Open main menu</span>
+            <!-- Menu icon -->
+            <svg
+              class="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"></path>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -84,13 +126,51 @@ const navItems = [
 </header>
 
 <script>
-  // Toggle mobile menu
-  const button = document.querySelector('button[aria-controls="mobile-menu"]');
-  const menu = document.getElementById("mobile-menu");
+  function getTheme(): string {
+    if (typeof localStorage !== "undefined") {
+      const storedTheme = localStorage.getItem("theme");
+      if (storedTheme) {
+        return storedTheme;
+      }
+    }
+    if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      return "dark";
+    }
+    return "light";
+  }
 
-  button?.addEventListener("click", () => {
-    const expanded = button.getAttribute("aria-expanded") === "true";
-    button.setAttribute("aria-expanded", (!expanded).toString());
-    menu?.classList.toggle("hidden");
+  function setTheme(theme: string) {
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+    localStorage.setItem("theme", theme);
+  }
+
+  setTheme(getTheme());
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const themeToggle = document.getElementById("theme-toggle");
+    if (themeToggle) {
+      themeToggle.addEventListener("click", () => {
+        const currentTheme = getTheme();
+        const newTheme = currentTheme === "dark" ? "light" : "dark";
+        setTheme(newTheme);
+      });
+    }
+
+    const button = document.querySelector(
+      'button[aria-controls="mobile-menu"]'
+    );
+    const menu = document.getElementById("mobile-menu");
+
+    if (button && menu) {
+      button.addEventListener("click", () => {
+        const expanded = button.getAttribute("aria-expanded") === "true";
+        button.setAttribute("aria-expanded", (!expanded).toString());
+        menu.classList.toggle("hidden");
+      });
+    }
   });
 </script>

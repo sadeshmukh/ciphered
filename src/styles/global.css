@@ -1,1 +1,32 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* below is for /aristocrat charts */
+
+.ct-chart .ct-bar {
+  stroke: rgb(16, 185, 129); /* emerald-500 */
+  stroke-width: 10px;
+  transform: translateX(-12px);
+}
+
+.ct-chart .ct-label {
+  font-size: 12px;
+  fill: rgb(107, 114, 128); /* gray-500 */
+}
+
+.ct-chart .ct-grid {
+  stroke: rgb(229, 231, 235); /* gray-200 */
+}
+
+.dark .ct-chart .ct-label {
+  fill: rgb(156, 163, 175); /* gray-400 */
+}
+
+.dark .ct-chart .ct-grid {
+  stroke: rgb(55, 65, 81); /* gray-700 */
+}
+
+/* Details arrow rotation */
+details[open] .details-arrow {
+  transform: rotate(90deg);
+}

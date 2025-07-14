@@ -5,6 +5,8 @@ import { cipherDocs } from "../data/cipherDocs";
 import CipherDocsPanel from "./CipherDocsPanel";
 import React from "react";
 
+import { BarChart } from "chartist";
+
 interface Props {
   cipherText?: string;
   patternURL?: string;
@@ -113,6 +115,43 @@ export default function AristocratSolver(props: Props = {}) {
     });
     return freqs;
   }, [cipherText]);
+
+  const chartRef = useRef<HTMLDivElement>(null);
+  const chartInstanceRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (!chartRef.current) return;
+
+    // without below - serious performance issues
+    if (chartInstanceRef.current) {
+      chartInstanceRef.current.detach();
+    }
+
+    const filteredLetters = letterOrder.filter((letter) => letter !== null);
+
+    const chartData = {
+      labels: filteredLetters.map((letter) => letter!.toUpperCase()),
+      series: [filteredLetters.map((letter) => frequencies[letter!] || 0)],
+    };
+
+    chartInstanceRef.current = new BarChart(chartRef.current, chartData, {
+      axisX: {
+        offset: 50,
+      },
+      axisY: {
+        offset: 30,
+        onlyInteger: true,
+      },
+      height: 300,
+    });
+
+    return () => {
+      // cleanup
+      if (chartInstanceRef.current) {
+        chartInstanceRef.current.detach();
+      }
+    };
+  }, [letterOrder, frequencies]);
 
   // check if all letters in the cipher pattern are already solved
   const areAllLettersFilled = (cipherPattern: string) => {
@@ -661,6 +700,10 @@ export default function AristocratSolver(props: Props = {}) {
       .join("");
   };
 
+  const hasLettersInPartialWord = (partialWord: string): boolean => {
+    return /[A-Z]/.test(partialWord);
+  };
+
   const getFilteredWords = (pattern: string, word: string): string[] => {
     if (!patternWords[pattern]) return [];
 
@@ -786,13 +829,39 @@ export default function AristocratSolver(props: Props = {}) {
               onClick={() => setIsEditingCipherText(!isEditingCipherText)}
               className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white transition"
             >
-              <span>{isEditingCipherText ? "▼" : "▶"} Edit Cipher Text</span>
+              <svg
+                className={`w-3 h-3 transition-transform ${
+                  isEditingCipherText ? "rotate-90" : ""
+                }`}
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <span>Edit Cipher Text</span>
             </button>
             <button
               onClick={() => setShowDocsPanel(!showDocsPanel)}
               className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white transition"
             >
-              <span>{showDocsPanel ? "▼" : "▶"} Help & Tips</span>
+              <svg
+                className={`w-3 h-3 transition-transform ${
+                  showDocsPanel ? "rotate-90" : ""
+                }`}
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <span>Help & Tips</span>
             </button>
           </div>
           <div className="flex items-center gap-2">
@@ -867,7 +936,11 @@ export default function AristocratSolver(props: Props = {}) {
                             className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                             onMouseEnter={() => {
                               debouncedFetchPattern(pattern);
-                              debouncedFetchPredict(convertToPartialWord(word));
+
+                              const partialWord = convertToPartialWord(word);
+                              if (hasLettersInPartialWord(partialWord)) {
+                                debouncedFetchPredict(partialWord);
+                              }
                             }}
                             onClick={() => {
                               setCurrentWordPattern({
@@ -952,7 +1025,20 @@ export default function AristocratSolver(props: Props = {}) {
               onClick={() => setShowHintPanel(!showHintPanel)}
               className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white transition"
             >
-              <span>{showHintPanel ? "▼" : "▶"} Smart Hints</span>
+              <svg
+                className={`w-3 h-3 transition-transform ${
+                  showHintPanel ? "rotate-90" : ""
+                }`}
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <span>Smart Hints</span>
               <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded">
                 {hintSuggestions.length}
               </span>
@@ -1208,6 +1294,25 @@ export default function AristocratSolver(props: Props = {}) {
             </tr>
           </tbody>
         </table>
+        <details className="mt-4">
+          <summary className="cursor-pointer text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition flex items-center gap-2">
+            <svg
+              className="w-3 h-3 transition-transform details-arrow"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <span>Letter Frequency Chart</span>
+          </summary>
+          <div className="mt-3 bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+            <div ref={chartRef} className="ct-chart"></div>
+          </div>
+        </details>
         {showCaesarModal && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
             <div className="bg-white dark:bg-gray-800 p-6 rounded shadow-lg max-w-sm w-full">
