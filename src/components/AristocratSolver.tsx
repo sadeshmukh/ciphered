@@ -14,6 +14,10 @@ interface PatternWords {
   [pattern: string]: string[];
 }
 
+interface PredictWords {
+  [partialWord: string]: string[];
+}
+
 interface HintSuggestion {
   type:
     | "digraph"
@@ -80,13 +84,18 @@ export default function AristocratSolver(props: Props = {}) {
   const [currentSampleIndex, setCurrentSampleIndex] = useState(0);
 
   const [patternWords, setPatternWords] = useState<PatternWords>({});
+  const [predictWords, setPredictWords] = useState<PredictWords>({});
   const [isLoadingPatterns, setIsLoadingPatterns] = useState(false);
+  const [isLoadingPredictions, setIsLoadingPredictions] = useState(false);
   const patternFetchTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const predictFetchTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const [showWordModal, setShowWordModal] = useState(false);
   const [currentWordPattern, setCurrentWordPattern] = useState<{
     pattern: string;
     word: string;
   } | null>(null);
+  const [showPatternWords, setShowPatternWords] = useState(true);
+  const [showPredictWords, setShowPredictWords] = useState(true);
   const [isReporting, setIsReporting] = useState(false);
 
   // HINT SYSTEM
@@ -619,6 +628,39 @@ export default function AristocratSolver(props: Props = {}) {
     }
   };
 
+  const fetchPredictWords = async (partialWord: string) => {
+    if (predictWords[partialWord]) return; // cache moment
+
+    setIsLoadingPredictions(true);
+    try {
+      const baseUrl = patternURL || process.env.NEXT_PUBLIC_PATTERN_URL;
+      if (!baseUrl) {
+        throw new Error("Pattern URL not configured");
+      }
+      const response = await fetch(`${baseUrl}/predict/${partialWord}`);
+      if (!response.ok) throw new Error("Failed to fetch predict words");
+      const data = await response.json();
+
+      // I should probably implement actual errors in the server at some point
+      if (typeof data.message === "string") {
+        throw new Error(data.message);
+      }
+
+      setPredictWords((prev) => ({ ...prev, [partialWord]: data.message }));
+    } catch (error) {
+      console.error("Error fetching predict words:", error);
+      setPredictWords((prev) => ({ ...prev, [partialWord]: [] })); // error = nothing
+    } finally {
+      setIsLoadingPredictions(false);
+    }
+  };
+
+  const convertToPartialWord = (word: string): string => {
+    return Array.from(word)
+      .map((char) => substitutions[char] || "_")
+      .join("");
+  };
+
   const getFilteredWords = (pattern: string, word: string): string[] => {
     if (!patternWords[pattern]) return [];
 
@@ -649,6 +691,39 @@ export default function AristocratSolver(props: Props = {}) {
     });
   };
 
+  const getFilteredPredictWords = (
+    partialWord: string,
+    word: string
+  ): string[] => {
+    if (!predictWords[partialWord]) return [];
+
+    // used letters
+    const usedPlainLetters = new Set<string>();
+    Object.entries(substitutions).forEach(([cipherChar, plainChar]) => {
+      if (plainChar) {
+        usedPlainLetters.add(plainChar);
+      }
+    });
+
+    return predictWords[partialWord].filter((possibleWord) => {
+      for (let i = 0; i < word.length; i++) {
+        const cipherChar = word[i];
+        const plainChar = substitutions[cipherChar];
+
+        // check for match
+        if (plainChar && plainChar !== possibleWord[i]) {
+          return false;
+        }
+
+        // if no substitution, check if the letter is already used elsewhere
+        if (!plainChar && usedPlainLetters.has(possibleWord[i])) {
+          return false;
+        }
+      }
+      return true;
+    });
+  };
+
   // Debounced pattern fetch
   const debouncedFetchPattern = (pattern: string) => {
     if (patternFetchTimeoutRef.current) {
@@ -656,6 +731,15 @@ export default function AristocratSolver(props: Props = {}) {
     }
     patternFetchTimeoutRef.current = setTimeout(() => {
       fetchPatternWords(pattern);
+    }, 300);
+  };
+
+  const debouncedFetchPredict = (partialWord: string) => {
+    if (predictFetchTimeoutRef.current) {
+      clearTimeout(predictFetchTimeoutRef.current);
+    }
+    predictFetchTimeoutRef.current = setTimeout(() => {
+      fetchPredictWords(partialWord);
     }, 300);
   };
 
@@ -781,7 +865,10 @@ export default function AristocratSolver(props: Props = {}) {
                           ))}
                           <div
                             className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                            onMouseEnter={() => debouncedFetchPattern(pattern)}
+                            onMouseEnter={() => {
+                              debouncedFetchPattern(pattern);
+                              debouncedFetchPredict(convertToPartialWord(word));
+                            }}
                             onClick={() => {
                               setCurrentWordPattern({
                                 pattern,
@@ -1163,34 +1250,125 @@ export default function AristocratSolver(props: Props = {}) {
                   ✕
                 </button>
               </div>
+
+              <div className="flex gap-4 mb-4">
+                <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <input
+                    type="checkbox"
+                    checked={showPatternWords}
+                    onChange={(e) => setShowPatternWords(e.target.checked)}
+                    className="rounded"
+                  />
+                  Pattern matches (
+                  {
+                    getFilteredWords(
+                      currentWordPattern.pattern,
+                      currentWordPattern.word
+                    ).length
+                  }
+                  )
+                </label>
+                <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <input
+                    type="checkbox"
+                    checked={showPredictWords}
+                    onChange={(e) => setShowPredictWords(e.target.checked)}
+                    className="rounded"
+                  />
+                  Partial matches (
+                  {
+                    getFilteredPredictWords(
+                      convertToPartialWord(currentWordPattern.word),
+                      currentWordPattern.word
+                    ).length
+                  }
+                  )
+                </label>
+              </div>
+
               <div className="overflow-y-auto flex-1">
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                  {getFilteredWords(
+                  {showPatternWords &&
+                    getFilteredWords(
+                      currentWordPattern.pattern,
+                      currentWordPattern.word
+                    ).map((word, idx) => (
+                      <div
+                        key={`pattern-${idx}`}
+                        className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 group relative border border-blue-200 dark:border-blue-800"
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-900 dark:text-gray-100">
+                            {word}
+                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleReportWord(
+                                word,
+                                currentWordPattern.pattern
+                              );
+                            }}
+                            className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Report this word"
+                          >
+                            ⚠️
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  {showPredictWords &&
+                    getFilteredPredictWords(
+                      convertToPartialWord(currentWordPattern.word),
+                      currentWordPattern.word
+                    ).map((word, idx) => (
+                      <div
+                        key={`predict-${idx}`}
+                        className="p-2 bg-green-50 dark:bg-green-900/20 rounded hover:bg-green-100 dark:hover:bg-green-900/30 group relative border border-green-200 dark:border-green-800"
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-900 dark:text-gray-100">
+                            {word}
+                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleReportWord(
+                                word,
+                                currentWordPattern.pattern
+                              );
+                            }}
+                            className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Report this word"
+                          >
+                            ⚠️
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+
+                {!showPatternWords && !showPredictWords && (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    Select at least one option to see word suggestions.
+                  </div>
+                )}
+
+                {(showPatternWords || showPredictWords) &&
+                  getFilteredWords(
                     currentWordPattern.pattern,
                     currentWordPattern.word
-                  ).map((word, idx) => (
-                    <div
-                      key={idx}
-                      className="p-2 bg-gray-50 dark:bg-gray-700 rounded hover:bg-gray-100 dark:hover:bg-gray-600 group relative"
-                    >
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-900 dark:text-gray-100">
-                          {word}
-                        </span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleReportWord(word, currentWordPattern.pattern);
-                          }}
-                          className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                          title="Report this word"
-                        >
-                          ⚠️
-                        </button>
-                      </div>
+                  ).length === 0 &&
+                  getFilteredPredictWords(
+                    convertToPartialWord(currentWordPattern.word),
+                    currentWordPattern.word
+                  ).length === 0 && (
+                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                      {isLoadingPatterns || isLoadingPredictions
+                        ? "Loading..."
+                        : "No matching words found."}
                     </div>
-                  ))}
-                </div>
+                  )}
               </div>
             </div>
           </div>
