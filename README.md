@@ -6,6 +6,14 @@ A modern web application providing interactive tools for solving cryptograms. Bu
 
 Try the demo [here](https://ciphered.sahil.ink)!
 
+## What is a cipher?
+
+Ciphers (also known as cryptograms) are a type of puzzle where the goal is to decrypt a message.
+
+The most common type of cipher is the substitution cipher, where each letter in the plaintext is replaced with another letter.
+
+This project focuses on 3 ciphers: the simple substitution cipher (aristocrat), the simple columnar transposition cipher, and the fractionated Morse cipher. It's meant to act as a tool to help solve manually, perhaps with a hint or two to guide you in the right direction. If you're ever looking for any sample puzzles, there's hundreds online - feel free to reach out to me for any more info!
+
 ## What does it do?
 
 - Aristocrats
