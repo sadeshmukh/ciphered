@@ -645,7 +645,10 @@ export default function AristocratSolver(props: Props = {}) {
 
     setIsLoadingPatterns(true);
     try {
-      const baseUrl = patternURL || process.env.NEXT_PUBLIC_PATTERN_URL;
+      const baseUrl =
+        patternURL ||
+        process.env.PUBLIC_PATTERN_URL ||
+        "https://ciphered.api.sahil.ink";
       if (!baseUrl) {
         throw new Error("Pattern URL not configured");
       }
@@ -672,7 +675,10 @@ export default function AristocratSolver(props: Props = {}) {
 
     setIsLoadingPredictions(true);
     try {
-      const baseUrl = patternURL || process.env.NEXT_PUBLIC_PATTERN_URL;
+      const baseUrl =
+        patternURL ||
+        process.env.PUBLIC_PATTERN_URL ||
+        "https://ciphered.api.sahil.ink";
       if (!baseUrl) {
         throw new Error("Pattern URL not configured");
       }

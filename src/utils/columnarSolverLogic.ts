@@ -309,7 +309,9 @@ function calculateCharacterSimilarity(text1: string, text2: string): number {
 async function evaluateWithAI(decryptedText: string): Promise<{
   spacedText: string;
 }> {
-  const PUBLIC_COMPLETIONS_API = import.meta.env.PUBLIC_COMPLETIONS_API;
+  const PUBLIC_COMPLETIONS_API =
+    import.meta.env.PUBLIC_COMPLETIONS_API ||
+    "https://ciphered.api.sahil.ink/completions";
 
   if (!PUBLIC_COMPLETIONS_API) {
     console.warn("PUBLIC_COMPLETIONS_API not found, skipping AI evaluation");

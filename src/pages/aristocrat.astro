@@ -2,7 +2,8 @@
 import Layout from "../layouts/Layout.astro";
 import AristocratSolver from "../components/AristocratSolver";
 
-const publicPatternUrl = import.meta.env.PUBLIC_PATTERN_URL;
+const publicPatternUrl =
+  import.meta.env.PUBLIC_PATTERN_URL || "https://ciphered.api.sahil.ink";
 ---
 
 <Layout title="Aristocrat | Ciphered">
